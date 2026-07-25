@@ -36,7 +36,9 @@ require_root() {
   [ "$(id -u)" -eq 0 ] || die "$1 must run as root (sudo)"
 }
 require_user() {
-  [ "$(id -u)" -eq 0 ] && die "$1 must NOT run as root; run as ${RUNNER_USER}"
+  # `[ ... ] && die` would return 1 for the non-root (success) case and `set -e`
+  # aborts the script silently. Keep the `||` shape so success exits 0.
+  [ "$(id -u)" -ne 0 ] || die "$1 must NOT run as root; run as ${RUNNER_USER}"
 }
 
 # ---- system packages ----

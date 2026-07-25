@@ -47,7 +47,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: install toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
+        with:
+          toolchain: stable
 
       # self-hosted runners keep ~/.cargo and target/ persistent across jobs,
       # so the GitHub cache API round-trip is pure waste.
