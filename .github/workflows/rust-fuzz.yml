@@ -81,8 +81,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # libFuzzer + sanitizer coverage need a dynamic-libc target. A runner that
+      # defaults builds to musl (static crt) breaks the sanitizer build, so pin
+      # the gnu target explicitly. Idempotent: no-op when gnu is already the host.
       - name: install toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
+        with:
+          toolchain: nightly
+          targets: x86_64-unknown-linux-gnu
 
       # self-hosted runners keep ~/.cargo and target/ persistent across jobs,
       # so the GitHub cache API round-trip is pure waste.
@@ -97,12 +103,6 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-fuzz
-
-      # libFuzzer + sanitizer coverage need a dynamic-libc target. A runner that
-      # defaults builds to musl (static crt) breaks the sanitizer build, so pin
-      # the gnu target explicitly. Idempotent: no-op when gnu is already the host.
-      - name: ensure gnu target
-        run: rustup target add x86_64-unknown-linux-gnu
 
       # private cross-repo git deps need a credential the runner lacks by
       # default. job-scoped gitconfig, token never touches a persistent
