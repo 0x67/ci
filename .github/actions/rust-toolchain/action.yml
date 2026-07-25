@@ -1,0 +1,80 @@
+name: rust toolchain
+description: >
+  Install a rustup toolchain. GitHub-hosted runners go through
+  dtolnay/rust-toolchain. Self-hosted runners serialize the install behind a
+  host-wide flock, because every runner on a host shares one $RUSTUP_HOME.
+
+inputs:
+  toolchain:
+    description: "Toolchain to install: stable, nightly, or a concrete version like 1.96.1"
+    required: true
+  components:
+    description: "Components to add, comma or space separated (rustfmt, clippy, miri, rust-src)"
+    required: false
+    default: ""
+  targets:
+    description: "Targets to add, comma or space separated"
+    required: false
+    default: ""
+  lock-timeout:
+    description: "Seconds to wait for the host rustup lock before failing (self-hosted only)"
+    required: false
+    default: "900"
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@master
+      if: ${{ runner.environment == 'github-hosted' }}
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
+
+    # Self-hosted: N runners on one host run as one user and share one
+    # $RUSTUP_HOME. Two concurrent `rustup toolchain install` runs mutate the
+    # same toolchain tree; the loser's rollback hits EEXIST renaming its backup
+    # over a dir the winner recreated, and aborts leaving NO toolchain at all.
+    # One lock per toolchain name, so stable and nightly still install in
+    # parallel. See polaris-trade AGENTS.md `# Self-hosted runners`.
+    - name: install ${{ inputs.toolchain }} (host-serialized)
+      if: ${{ runner.environment != 'github-hosted' }}
+      shell: bash
+      env:
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        COMPONENTS: ${{ inputs.components }}
+        TARGETS: ${{ inputs.targets }}
+        LOCK_TIMEOUT: ${{ inputs.lock-timeout }}
+      run: |
+        set -euo pipefail
+
+        args=(--profile minimal --no-self-update)
+        for c in ${COMPONENTS//,/ }; do
+          args+=(--component "$c")
+        done
+        for t in ${TARGETS//,/ }; do
+          args+=(--target "$t")
+        done
+
+        # flock ships with util-linux. Missing means we cannot serialize, so say
+        # so loudly rather than silently reintroducing the race.
+        if ! command -v flock >/dev/null 2>&1; then
+          echo "::warning::flock not found; installing $TOOLCHAIN unserialized. Concurrent runners on this host can corrupt \$RUSTUP_HOME. Install util-linux."
+          rustup toolchain install "$TOOLCHAIN" "${args[@]}"
+          exit 0
+        fi
+
+        # Host-global path: /tmp is shared by every runner on the box, unlike
+        # $RUNNER_TOOL_CACHE which is per-runner. Mode 0666 so runners running
+        # as different users still contend on the same file.
+        lock="/tmp/rustup-install-${TOOLCHAIN//[^A-Za-z0-9._-]/_}.lock"
+        ( umask 000; : >> "$lock" ) 2>/dev/null || true
+
+        exec 9>>"$lock"
+        if ! flock -w "$LOCK_TIMEOUT" 9; then
+          echo "::error::timed out after ${LOCK_TIMEOUT}s waiting for $lock. Another job on this host is installing $TOOLCHAIN, or a stale holder is wedged."
+          exit 1
+        fi
+
+        rustup toolchain install "$TOOLCHAIN" "${args[@]}"
+        RUSTUP_TOOLCHAIN="$TOOLCHAIN" rustc --version

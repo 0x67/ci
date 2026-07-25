@@ -186,8 +186,10 @@ jobs:
       # nightly rustfmt: rustfmt.toml uses unstable options (imports_granularity,
       # group_imports, ignore). Stable rustfmt silently drops them. Build/clippy/test
       # stay on stable.
-      - uses: dtolnay/rust-toolchain@nightly
+      - name: install toolchain
+        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
         with:
+          toolchain: nightly
           components: rustfmt
 
       # +nightly is required: the action only sets `rustup default`, and a repo's
@@ -220,8 +222,9 @@ jobs:
             rustup-clippy-
 
       - name: install toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
         with:
+          toolchain: stable
           components: clippy
 
       - uses: Swatinem/rust-cache@v2
@@ -302,7 +305,7 @@ jobs:
 
       # Env selects but does not install; keep the install step.
       - name: install toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
         with:
           toolchain: ${{ matrix.toolchain }}
 
