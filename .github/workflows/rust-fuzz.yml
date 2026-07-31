@@ -100,7 +100,7 @@ jobs:
       # self-hosted runners pre-provision cargo-fuzz during VPS bootstrap
       - name: install cargo-fuzz
         if: ${{ runner.environment == 'github-hosted' }}
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.85.3
         with:
           tool: cargo-fuzz
 
@@ -188,7 +188,7 @@ jobs:
 
       - name: upload crash artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-artifacts-${{ github.run_id }}
           path: ${{ inputs.fuzz-dir }}/artifacts/

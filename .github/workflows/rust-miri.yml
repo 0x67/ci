@@ -68,7 +68,7 @@ jobs:
       # self-hosted runners pre-provision cargo-nextest during VPS bootstrap
       - name: install cargo-nextest
         if: ${{ runner.environment == 'github-hosted' }}
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.85.3
         with:
           tool: cargo-nextest
 

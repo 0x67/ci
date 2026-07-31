@@ -25,7 +25,7 @@ jobs:
       # github-hosted runners install it fresh here each run.
       - name: install cargo-audit
         if: ${{ runner.environment == 'github-hosted' }}
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.85.3
         with:
           tool: cargo-audit
 
