@@ -35,7 +35,7 @@ on:
         default: "100"
         type: string
       runner:
-        description: "runs-on value. Bare string (ubuntu-latest) or JSON array of labels for self-hosted."
+        description: "runs-on value. Bare string (ubuntu-latest) or JSON array of labels."
         required: false
         default: "ubuntu-latest"
         type: string

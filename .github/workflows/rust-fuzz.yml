@@ -14,7 +14,7 @@ on:
   workflow_call:
     inputs:
       runner:
-        description: "runs-on for the fuzz job. Bare string or JSON array of labels for self-hosted."
+        description: "runs-on for the fuzz job. Bare string or JSON array of labels."
         required: false
         default: "ubuntu-latest"
         type: string
@@ -64,7 +64,7 @@ jobs:
     # keyed on mode so a check and a discover caller job never share a group
     # (that collision cancels both). cancel-in-progress supersedes a stale run:
     # a newer PR push replaces its check, a newer main merge replaces its
-    # discovery, so at most one fuzz job per mode per repo holds the fleet.
+    # discovery, so at most one fuzz job per mode per repo runs at a time.
     concurrency:
       group: fuzz-${{ inputs.mode }}-${{ github.repository }}
       cancel-in-progress: true
@@ -85,19 +85,16 @@ jobs:
       # defaults builds to musl (static crt) breaks the sanitizer build, so pin
       # the gnu target explicitly. Idempotent: no-op when gnu is already the host.
       - name: install toolchain
-        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
           targets: x86_64-unknown-linux-gnu
 
-      # self-hosted runners keep ~/.cargo and target/ persistent across jobs,
-      # so the GitHub cache API round-trip is pure waste.
       - uses: Swatinem/rust-cache@v2
         if: ${{ runner.environment == 'github-hosted' }}
         with:
           workspaces: ${{ inputs.fuzz-dir }}
 
-      # self-hosted runners pre-provision cargo-fuzz during VPS bootstrap
       - name: install cargo-fuzz
         if: ${{ runner.environment == 'github-hosted' }}
         uses: taiki-e/install-action@v2
