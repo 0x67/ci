@@ -114,10 +114,10 @@ jobs:
           commit-message: |
             chore(msrv): bump to ${{ inputs.msrv }}
 
-            Dispatched from polaris-trade/ci msrv-bump.yml.
+            Dispatched from 0x67/ci msrv-bump.yml.
           title: "chore(msrv): bump to ${{ inputs.msrv }}"
           body: |
-            Automated MSRV bump dispatched from [`polaris-trade/ci`](https://github.com/polaris-trade/ci/actions/workflows/msrv-bump.yml).
+            Automated MSRV bump dispatched from [`0x67/ci`](https://github.com/0x67/ci/actions/workflows/msrv-bump.yml).
 
             **Changes**
             - `rust-toolchain.toml` `channel` → `${{ inputs.msrv }}`
