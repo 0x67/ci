@@ -9,7 +9,7 @@ on:
   workflow_call:
     inputs:
       runner:
-        description: "runs-on value. Bare string (ubuntu-latest) or JSON array of labels for self-hosted."
+        description: "runs-on value. Bare string (ubuntu-latest) or JSON array of labels."
         required: false
         default: "ubuntu-latest"
         type: string
@@ -21,8 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # self-hosted runners pre-provision cargo-audit during VPS bootstrap.
-      # github-hosted runners install it fresh here each run.
       - name: install cargo-audit
         if: ${{ runner.environment == 'github-hosted' }}
         uses: taiki-e/install-action@v2

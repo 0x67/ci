@@ -13,7 +13,7 @@ on:
   workflow_call:
     inputs:
       runner:
-        description: "runs-on for the miri job. Bare string or JSON array of labels for self-hosted."
+        description: "runs-on for the miri job. Bare string or JSON array of labels."
         required: false
         default: "ubuntu-latest"
         type: string
@@ -55,17 +55,14 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: install toolchain
-        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
           components: miri, rust-src
 
-      # self-hosted runners keep ~/.cargo and target/ persistent across jobs,
-      # so the GitHub cache API round-trip is pure waste.
       - uses: Swatinem/rust-cache@v2
         if: ${{ runner.environment == 'github-hosted' }}
 
-      # self-hosted runners pre-provision cargo-nextest during VPS bootstrap
       - name: install cargo-nextest
         if: ${{ runner.environment == 'github-hosted' }}
         uses: taiki-e/install-action@v2

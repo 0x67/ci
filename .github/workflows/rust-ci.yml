@@ -45,7 +45,7 @@ on:
         default: '[]'
         type: string
       runner-linux:
-        description: "runs-on for internal Linux-only jobs (prepare, fmt, clippy). Bare string or JSON array of labels for self-hosted. Test matrix uses os-matrix independently."
+        description: "runs-on for internal Linux-only jobs (prepare, fmt, clippy). Bare string or JSON array of labels. Test matrix uses os-matrix independently."
         required: false
         default: "ubuntu-latest"
         type: string
@@ -169,9 +169,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Self-hosted runners keep ~/.rustup persistent across jobs, so the GitHub
-      # cache API round-trip (upload + download of 100MB+ tarballs) is pure waste.
-      # Gate the cache step to GitHub-hosted runners only.
       - name: cache rustup toolchain
         if: ${{ runner.environment == 'github-hosted' }}
         uses: actions/cache@v4
@@ -187,7 +184,7 @@ jobs:
       # group_imports, ignore). Stable rustfmt silently drops them. Build/clippy/test
       # stay on stable.
       - name: install toolchain
-        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
           components: rustfmt
@@ -222,7 +219,7 @@ jobs:
             rustup-clippy-
 
       - name: install toolchain
-        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
           components: clippy
@@ -289,9 +286,6 @@ jobs:
         shell: pwsh
         run: Add-MpPreference -ExclusionPath "${{ github.workspace }}\target"
 
-      # Self-hosted runners keep ~/.rustup and ~/.cargo and target/ persistent
-      # across jobs, so the GitHub cache API round-trip is pure waste. Gate
-      # both cache steps to GitHub-hosted runners only.
       - name: cache rustup toolchain
         if: ${{ runner.environment == 'github-hosted' }}
         uses: actions/cache@v4
@@ -305,7 +299,7 @@ jobs:
 
       # Env selects but does not install; keep the install step.
       - name: install toolchain
-        uses: polaris-trade/ci/.github/actions/rust-toolchain@main
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
 
@@ -314,9 +308,6 @@ jobs:
         with:
           key: ${{ matrix.os }}-${{ matrix.toolchain }}
 
-      # Self-hosted runners pre-install cargo-nextest during VPS bootstrap.
-      # taiki-e/install-action's sha256 verify is flaky on AlmaLinux 9
-      # (SELinux + shared _work/_temp when multiple runners run on one host).
       - name: install cargo-nextest
         if: ${{ runner.environment == 'github-hosted' }}
         uses: taiki-e/install-action@v2
@@ -325,7 +316,7 @@ jobs:
 
       # Private cross-repo cargo git deps need a credential the runner lacks by
       # default. Write it to a job-scoped gitconfig (RUNNER_TEMP is wiped per job)
-      # so the token never lands in a self-hosted runner's persistent ~/.gitconfig.
+      # so the token never lands in ~/.gitconfig.
       # cargo fetches via the git CLI, which honors GIT_CONFIG_GLOBAL. No-op when
       # no token is passed (public/crates.io-only repos).
       - name: configure private cross-repo dep auth
