@@ -2,7 +2,7 @@
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-Shared, reusable GitHub Actions workflows for every module. Right now only supports Rust modules. Central home for CI conventions — one PR here rolls out to all callers on next dispatch.
+Shared, reusable GitHub Actions workflows for every repository under `0x67`. Rust only for now; other languages get their own prefixed files (see Naming). One PR here reaches every caller on its next run.
 
 ## Layout
 
@@ -10,17 +10,25 @@ Shared, reusable GitHub Actions workflows for every module. Right now only suppo
 ci/
   .github/
     workflows/
-      rust-ci.yml        # workflow_call: fmt, clippy, cargo nextest, 3-OS × 3-toolchain matrix
-      pr-title.yml       # workflow_call: Conventional Commits PR title lint
-      release-please.yml # workflow_call: release-please version-bump PR, tag, GitHub Release
-      msrv-bump.yml      # workflow_dispatch: fan out MSRV bump PRs to downstream repos
+      rust-ci.yml         # workflow_call: fmt, clippy, cargo nextest, OS × toolchain matrix
+      rust-features.yml   # workflow_call: cargo-hack feature powerset, extra commands
+      rust-miri.yml       # workflow_call: caller-selected test slice under Miri
+      rust-fuzz.yml       # workflow_call: cargo-fuzz corpus replay (check) or time-bounded discovery
+      rust-audit.yml      # workflow_call: RustSec scan of the committed Cargo.lock
+      pr-title.yml        # workflow_call: Conventional Commits PR title lint
+      release-please.yml  # workflow_call: release-please version-bump PR, tag, GitHub Release
+      msrv-bump.yml       # workflow_dispatch: fan out MSRV bump PRs to downstream repos
   downstream.example.json  # schema reference. Real list lives in vars.DOWNSTREAM_REPOS.
   README.md
 ```
 
+## Naming
+
+Language-specific workflows carry a language prefix: `rust-*` today, `go-*` and `node-*` when those land. Language-agnostic ones (`pr-title`, `release-please`, `msrv-bump`) stay unprefixed.
+
 ## Consuming from another repo
 
-Reusable workflows are called with `uses: OWNER/REPO/.github/workflows/<name>.yml@REF`. Callers stay thin — one job stanza each.
+Reusable workflows are called with `uses: OWNER/REPO/.github/workflows/<name>.yml@REF`. Callers stay thin: one job stanza each.
 
 ### `.github/workflows/ci.yml` (caller)
 
@@ -33,7 +41,7 @@ on:
 
 jobs:
   rust:
-    uses: {org|user}/ci/.github/workflows/rust-ci.yml@main
+    uses: 0x67/ci/.github/workflows/rust-ci.yml@main
     # optional:
     # with:
     #   workspace-args: "--all-features"
@@ -41,7 +49,7 @@ jobs:
     #   extra-toolchains: '["beta"]'
 ```
 
-MSRV is read from the caller repo's `rust-toolchain.toml` at run time. **No `msrv:` input.** Bump `rust-toolchain.toml` — that is the only source of truth per module.
+MSRV is read from the caller repo's `rust-toolchain.toml` at run time. **No `msrv:` input.** Bump `rust-toolchain.toml`; that is the only source of truth per module.
 
 ### `.github/workflows/pr-title.yml` (caller)
 
@@ -53,7 +61,7 @@ on:
 
 jobs:
   lint:
-    uses: {org|user}/ci/.github/workflows/pr-title.yml@main
+    uses: 0x67/ci/.github/workflows/pr-title.yml@main
 ```
 
 ### `.github/workflows/release.yml` (caller)
@@ -66,7 +74,7 @@ on:
 
 jobs:
   release:
-    uses: {org|user}/ci/.github/workflows/release-please.yml@main
+    uses: 0x67/ci/.github/workflows/release-please.yml@main
     secrets:
       release-token: ${{ secrets.RELEASE_PLZ_TOKEN }}
 ```
@@ -94,15 +102,17 @@ Single source of truth per module = its own `rust-toolchain.toml`. Central autho
 Run from GitHub UI on the `ci` repo → Actions → `msrv-bump` → Run workflow:
 
 - Input: new MSRV (e.g. `1.98.0`).
-- Reads target repos from **`vars.DOWNSTREAM_REPOS`** (private Actions variable — never committed to this public repo).
+- Reads target repos from **`vars.DOWNSTREAM_REPOS`** (private Actions variable, never committed to this public repo).
 - For each: checks out, updates `rust-toolchain.toml` `channel`, updates `Cargo.toml` `[workspace.package] rust-version`, opens a PR titled `chore(msrv): bump to <version>`.
 
 ### One-time setup on the `ci` repo
 
+Neither setting below exists yet, so `msrv-bump` cannot run until both are added.
+
 1. **`vars.DOWNSTREAM_REPOS`** — Settings → Secrets and variables → Actions → **Variables** tab → New repository variable. Paste JSON matching `downstream.example.json`:
    ```json
    {
-     "repos": [{ "repo": "{org|user}/{repo-name}", "base_branch": "main" }]
+     "repos": [{ "repo": "0x67/{repo-name}", "base_branch": "main" }]
    }
    ```
    Repository variables are plaintext but not in git and only visible to users with write access to the repo. Perfect for a private list on a public repo. Not a secret — do not use it for tokens.
@@ -128,7 +138,7 @@ Why not `release-plz`: it runs `cargo package` internally to compute the next ve
 
 ## Pinning `@ref`
 
-`@main` = latest. For prod modules pin `@vX.Y.Z` tags cut in the `ci` repo, or `@<sha>`. Renovate/Dependabot can bump reusable-workflow refs.
+Repositories under `0x67` call `@main`: one PR here reaches all of them on their next run, and a breaking change shows up in those runs. A `v1` tag gets cut the day a repository outside `0x67` depends on this one; outside callers should pin that tag or a commit SHA. Dependabot can bump pinned refs.
 
 ## License
 
