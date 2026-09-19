@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    uses: {{ci_owner}}/ci/.github/workflows/rust-ci.yml@{{ci_ref}}
+    # private repo: Linux-only matrix (GitHub-hosted macOS bills minutes at 10x
+    # against the included private-repo pool)
+    # with:
+    #   os-matrix: '["ubuntu-latest"]'
+
+  # feature-configuration checks: uncomment once the crate defines [features].
+  # powerset for small sets, extra-commands for endpoint shapes; live examples
+  # in the clients and transports callers.
+  # features:
+  #   uses: {{ci_owner}}/ci/.github/workflows/rust-features.yml@{{ci_ref}}
+  #   with:
+  #     hack-args: -p {{crate_name}} --feature-powerset
+  #     extra-commands: |
+  #       cargo check --workspace --all-features
