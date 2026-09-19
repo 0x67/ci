@@ -3,7 +3,7 @@
 # Docs: https://lefthook.dev
 
 # ---------------------------------------------------------------------------
-# pre-commit — cheap, changed-files-only. Run before every commit.
+# pre-commit: cheap, changed-files-only. Run before every commit.
 # ---------------------------------------------------------------------------
 pre-commit:
   parallel: true
@@ -33,7 +33,7 @@ pre-commit:
       run: lat check
 
 # ---------------------------------------------------------------------------
-# commit-msg — Conventional Commits gate. `convco` = pure-Rust linter.
+# commit-msg: Conventional Commits gate. `convco` = pure-Rust linter.
 # ---------------------------------------------------------------------------
 commit-msg:
   commands:
@@ -41,7 +41,7 @@ commit-msg:
       run: convco check --from-stdin < {1}
 
 # ---------------------------------------------------------------------------
-# pre-push — full test suite. Slow, so runs only on push.
+# pre-push: full test suite. Slow, so runs only on push.
 # ---------------------------------------------------------------------------
 pre-push:
   commands:

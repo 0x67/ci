@@ -1,7 +1,7 @@
 ---
 name: lat-md
 description: >-
-  Writing and maintaining lat.md documentation files — structured markdown that
+  Writing and maintaining lat.md documentation files: structured markdown that
   describes a project's architecture, design decisions, and test specs. Use when
   creating, editing, or reviewing files in the lat.md/ directory.
 ---
@@ -12,7 +12,7 @@ This skill covers the syntax, structure rules, and conventions for writing `lat.
 
 ## What belongs in lat.md
 
-`lat.md/` files describe **what** the project does and **why** — domain concepts, key design decisions, business logic, and test specifications. They do NOT duplicate source code. Think of each section as an anchor that source code references back to.
+`lat.md/` files describe **what** the project does and **why**: domain concepts, key design decisions, business logic, and test specifications. They do NOT duplicate source code. Think of each section as an anchor that source code references back to.
 
 Good candidates for sections:
 - Architecture decisions and their rationale
@@ -28,9 +28,9 @@ Bad candidates:
 
 ## Section structure
 
-Every section **must** have a leading paragraph — at least one sentence immediately after the heading, before any child headings or other block content.
+Every section **must** have a leading paragraph: at least one sentence immediately after the heading, before any child headings or other block content.
 
-The first paragraph must be ≤250 characters (excluding `[[wiki link]]` content). This paragraph is the section's identity — it appears in search results, command output, and RAG context.
+The first paragraph must be ≤250 characters (excluding `[[wiki link]]` content). This paragraph is the section's identity: it appears in search results, command output, and RAG context.
 
 ```markdown
 # Good Section
@@ -49,7 +49,7 @@ Details about this child topic.
 
 ## Child heading
 
-This is invalid — "Bad Section" has no leading paragraph.
+This is invalid: "Bad Section" has no leading paragraph.
 ```
 
 `lat check` enforces this rule.
@@ -79,12 +79,12 @@ The parser validates [[parser#Wiki Links|wiki link syntax]].
 Reference functions, classes, constants, and methods in source files:
 
 ```markdown
-[[src/config.ts#getConfigDir]]          — function
-[[src/server.ts#App#listen]]            — class method
-[[lib/utils.py#parse_args]]             — Python function
-[[src/lib.rs#Greeter#greet]]            — Rust impl method
-[[src/app.go#Greeter#Greet]]            — Go method
-[[src/app.h#Greeter]]                   — C struct
+[[src/config.ts#getConfigDir]]         : function
+[[src/server.ts#App#listen]]           : class method
+[[lib/utils.py#parse_args]]            : Python function
+[[src/lib.rs#Greeter#greet]]           : Rust impl method
+[[src/app.go#Greeter#Greet]]           : Go method
+[[src/app.h#Greeter]]                  : C struct
 ```
 
 `lat check` validates that all targets exist.
@@ -106,7 +106,7 @@ def init():
 
 Supported comment styles: `//` (JS/TS/Rust/Go/C) and `#` (Python).
 
-Place one `@lat:` comment per section, at the relevant code — not at the top of the file.
+Place one `@lat:` comment per section, at the relevant code: not at the top of the file.
 
 ## Test specs
 
@@ -144,7 +144,7 @@ def test_rejects_expired_tokens():
 
 Rules:
 - Every leaf section under `require-code-mention: true` must be referenced by exactly one `@lat:` comment
-- Every section MUST have a description — at least one sentence explaining what the test verifies and why
+- Every section MUST have a description: at least one sentence explaining what the test verifies and why
 - `lat check` flags unreferenced specs and dangling code refs
 
 ## Frontmatter

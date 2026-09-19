@@ -6,7 +6,7 @@ default:
     @just --list --unsorted
 
 # ---------------------------------------------------------------------------
-# Build variants — profiles defined in .cargo/config.toml
+# Build variants: profiles defined in .cargo/config.toml
 # ---------------------------------------------------------------------------
 
 # Debug build (default cargo profile).
@@ -31,7 +31,7 @@ ci-build:
 
 # Debug + optimisation. Loads .cargo/profiling.toml so the strip/dead-strip
 # linker flags in the base config are replaced with frame-pointer preserving
-# ones — samply/perf/instruments get usable symbols.
+# ones, so samply/perf/instruments get usable symbols.
 profile:
     cargo --config @.cargo/profiling.toml build --workspace --profile profiling
 
