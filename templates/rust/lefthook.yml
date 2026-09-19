@@ -11,7 +11,8 @@ pre-commit:
     branch-name:
       # Reject direct commits to protected branches and enforce <type>/<slug> shape.
       run: |
-        branch=$(git rev-parse --abbrev-ref HEAD)
+        # symbolic-ref, not rev-parse: works before the first commit exists
+        branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo detached)
         case "$branch" in
           main|master) echo "commit directly to '$branch' blocked. Open feature branch."; exit 1 ;;
         esac
