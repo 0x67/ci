@@ -1,0 +1,113 @@
+name: rust-template
+
+# Renders templates/rust the way a new repository gets it and checks the
+# result. Runs on template changes and on reusable Rust workflow changes,
+# since the template's callers invoke those. Runs in this repository only.
+
+on:
+  pull_request:
+    paths:
+      - "templates/rust/**"
+      - ".github/workflows/rust-*.yml"
+      - ".github/workflows/pr-title.yml"
+      - ".github/workflows/release-please.yml"
+  push:
+    branches: [main]
+    paths:
+      - "templates/rust/**"
+      - ".github/workflows/rust-*.yml"
+      - ".github/workflows/pr-title.yml"
+      - ".github/workflows/release-please.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: render and check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TEMPLATE: templates/rust
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: install cargo-generate
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-generate
+
+      # pinned to the release tag, not main
+      - name: install actionlint
+        id: actionlint
+        shell: bash
+        run: bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12 "$RUNNER_TEMP"
+
+      # an undeclared placeholder renders as an empty string, so no check on
+      # the output can see it; compare names before rendering
+      - name: placeholder coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          used=$(grep -rhoP '(?:^|[^$])\{\{\s*\K[A-Za-z_][A-Za-z0-9_-]*' "$TEMPLATE" \
+            --exclude=cargo-generate.toml --exclude=TEMPLATE.md --exclude=justfile | sort -u)
+          declared=$(sed -n '/^\[placeholders\]/,$p' "$TEMPLATE/cargo-generate.toml" | grep -oE '^[a-z_-]+' || true)
+          # cargo-generate built-ins
+          known=$(printf '%s\n' "$declared" project-name crate_name crate_type authors os-arch within_cargo_project is_init | sort -u)
+          missing=$(comm -23 <(printf '%s\n' "$used") <(printf '%s\n' "$known"))
+          if [ -n "$missing" ]; then
+            echo "::error::undeclared placeholders: $missing"
+            exit 1
+          fi
+
+      # defaults for ci_owner, ci_ref, msrv, year, visibility: what a real bootstrap gets.
+      # --silent writes templated defaults literally, so homepage and repository are explicit.
+      - name: render
+        shell: bash
+        run: |
+          cargo generate --path "$TEMPLATE" --name template-smoke --silent --destination "$RUNNER_TEMP" \
+            --define description=smoke \
+            --define author_name=smoke \
+            --define author_email=smoke@example.invalid \
+            --define homepage=https://github.com/0x67/template-smoke \
+            --define repository=https://github.com/0x67/template-smoke
+
+      - name: assert rendered output
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/template-smoke"
+          fail=0
+          if grep -rnP '(^|[^$])\{\{|\{%' "$out" --exclude-dir=.git --exclude=justfile; then
+            echo "::error::unrendered Liquid"; fail=1
+          fi
+          if [ -e "$out/specs" ]; then
+            echo "::error::specs/ reached the generated repository"; fail=1
+          fi
+          # bracket keeps this line out of the repo-wide old-owner grep
+          if grep -rnE 'polaris[-]trade/|root .?AGENTS' "$out" --exclude-dir=.git; then
+            echo "::error::stale owner or workspace-root pointer"; fail=1
+          fi
+          if grep -rhn 'uses: ' "$out/.github" | grep -v 'uses: 0x67/ci/'; then
+            echo "::error::a caller does not name 0x67/ci"; fail=1
+          fi
+          if ! cmp -s "$TEMPLATE/justfile" "$out/justfile"; then
+            echo "::error::justfile was rendered, not copied"; fail=1
+          fi
+          if ! grep -q '^Visibility: PUBLIC\.' "$out/AGENTS.md"; then
+            echo "::error::visibility line did not render"; fail=1
+          fi
+          exit "$fail"
+
+      - name: actionlint rendered workflows
+        shell: bash
+        run: '"${{ steps.actionlint.outputs.executable }}" "$RUNNER_TEMP"/template-smoke/.github/workflows/*.yml'
+
+      - name: cargo check
+        shell: bash
+        working-directory: ${{ runner.temp }}/template-smoke
+        run: |
+          rustup toolchain install
+          rustc --version
+          cargo check --all-targets

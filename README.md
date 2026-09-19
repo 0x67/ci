@@ -18,13 +18,29 @@ ci/
       pr-title.yml        # workflow_call: Conventional Commits PR title lint
       release-please.yml  # workflow_call: release-please version-bump PR, tag, GitHub Release
       msrv-bump.yml       # workflow_dispatch: fan out MSRV bump PRs to downstream repos
+      rust-template.yml   # this repo only: renders templates/rust and checks the result
+  templates/
+    rust/                 # cargo-generate template for a new standalone Rust repository
   downstream.example.json  # schema reference. Real list lives in vars.DOWNSTREAM_REPOS.
   README.md
 ```
 
 ## Naming
 
-Language-specific workflows carry a language prefix: `rust-*` today, `go-*` and `node-*` when those land. Language-agnostic ones (`pr-title`, `release-please`, `msrv-bump`) stay unprefixed.
+Language-specific workflows carry a language prefix: `rust-*` today, `go-*` and `node-*` when those land. Language-agnostic ones (`pr-title`, `release-please`, `msrv-bump`) stay unprefixed. Templates follow the same split by directory: `templates/rust/` today, `templates/<lang>/` beside it when another language lands.
+
+## Starting a new repository
+
+A new standalone Rust repository starts from `templates/rust/`, whose callers already point at this repo:
+
+```bash
+cargo install cargo-generate  # once per machine
+cargo generate --git https://github.com/0x67/ci templates/rust --name my-repo
+```
+
+cargo-generate prompts for `description`, `author_name`, `author_email`, `year`, `homepage`, `repository`, `msrv`, `ci_owner` (default `0x67`), `ci_ref` (default `main`), and `visibility` (`PUBLIC` or `PRIVATE`). A private repository then sets `os-matrix: '["ubuntu-latest"]'` in its `ci.yml` caller; see the comment there. MCP config (`.mcp.json`) is per machine and does not ship. `templates/rust/TEMPLATE.md` has the maintainer notes.
+
+A change under `templates/rust/`, or to any reusable Rust workflow, runs `rust-template.yml`: it checks every placeholder is declared, renders the template, asserts the output, and runs `actionlint` and `cargo check` on it.
 
 ## Consuming from another repo
 

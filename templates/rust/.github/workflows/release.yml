@@ -1,0 +1,11 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    uses: {{ci_owner}}/ci/.github/workflows/release-please.yml@{{ci_ref}}
+    secrets:
+      release-token:                           {% raw %}${{ secrets.RELEASE_PLZ_TOKEN }}{% endraw %}

@@ -1,0 +1,27 @@
+[template]
+cargo_generate_version = ">=0.22.0"
+# copied verbatim: {{BIN}} and {{VERSION}} there are `just` recipe parameters, not placeholders
+exclude = ["justfile"]
+ignore = [
+  # example content that must not leak into new modules
+  "specs/**",
+  "docs/*.pdf",
+  "docs/*.md",
+  # meta
+  "cargo-generate.toml",
+  "TEMPLATE.md",
+  "CHANGELOG.md",
+  ".vscode/settings.json",
+]
+
+[placeholders]
+description = { type = "string", prompt = "One-line description", default = "A Rust module" }
+author_name = { type = "string", prompt = "Author legal name (for LICENSE + NOTICE copyright)" }
+author_email = { type = "string", prompt = "Author email" }
+year = { type = "string", prompt = "Copyright year", default = "2026", regex = "^[0-9]{4}$" }
+homepage = { type = "string", prompt = "Homepage URL", default = "https://github.com/{{ci_owner}}" }
+repository = { type = "string", prompt = "Repository URL", default = "https://github.com/{{ci_owner}}/{{project-name}}" }
+msrv = { type = "string", prompt = "MSRV pin (also written to rust-toolchain.toml)", default = "1.96.1", regex = "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$" }
+ci_owner = { type = "string", prompt = "GitHub owner (user or org) hosting the shared `ci` repo", default = "0x67" }
+ci_ref = { type = "string", prompt = "Git ref of the shared `ci` repo to pin against (branch, tag, or SHA)", default = "main" }
+visibility = { type = "string", prompt = "Repository visibility", choices = ["PUBLIC", "PRIVATE"], default = "PUBLIC" }
