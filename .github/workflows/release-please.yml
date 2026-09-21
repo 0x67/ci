@@ -34,6 +34,11 @@ on:
         required: false
         default: "ubuntu-latest"
         type: string
+      update-lock:
+        description: "Refresh Cargo.lock on the release PR. Needed when the release type does not maintain the lockfile itself, as a single lockstep component over a cargo workspace does not."
+        required: false
+        default: false
+        type: boolean
     secrets:
       release-token:
         description: "PAT (contents: write + pull-requests: write). A PAT (not GITHUB_TOKEN) so the tag push retriggers downstream CI."
@@ -61,7 +66,36 @@ jobs:
           fi
 
       - uses: googleapis/release-please-action@v5
+        id: release
         with:
           token: ${{ secrets.release-token }}
           config-file: ${{ inputs.config-file }}
           manifest-file: ${{ inputs.manifest-file }}
+
+      # A lockstep component bumps crate versions through extra-files, and no
+      # updater can carry those into Cargo.lock: cargo rewrites that file and
+      # strips the annotations a generic updater needs. Refresh it on the PR
+      # branch instead, so a --locked build of the release commit still works.
+      - uses: actions/checkout@v7
+        if: inputs.update-lock && steps.release.outputs.pr
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
+          token: ${{ secrets.release-token }}
+
+      - name: refresh Cargo.lock
+        if: inputs.update-lock && steps.release.outputs.pr
+        env:
+          BRANCH: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
+        run: |
+          set -euo pipefail
+          # workspace members only: external pins stay exactly as resolved
+          cargo update --workspace
+          if git diff --quiet -- Cargo.lock; then
+            echo "Cargo.lock already matches the bumped versions"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock
+          git commit -m "chore(release): refresh Cargo.lock"
+          git push origin "HEAD:$BRANCH"
