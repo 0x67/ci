@@ -109,20 +109,21 @@ The second example is invalid because `Bad Section` has no leading paragraph. `l
 
 All agents (Conductor, subagents, standalone) MUST follow this order before planning, implementation, review, investigation, writing code, or delegating research:
 
-1. Call `agentmemory/memory_recall` with task, file, and module keywords when available.
+1. Check the agent's memory for task, file, and module keywords (Claude Code: the `MEMORY.md` auto memory index).
 2. Use `lat locate` or `lat expand` for architecture and design context when `lat.md/` exists.
-3. Use Semble for semantic code search: `uvx --from "semble[mcp]" semble search "query" .`.
-4. Use exposed `fff-mcp` MCP tools (`fff-grep`, `fff-find_files`, `fff-multi_grep`) for exact/file search.
-5. Use `rust-analyzer` for Rust definitions, references, hover, diagnostics.
-6. Fall back to regular search/read tools if preferred tools are missing, fail, or lack needed capability. State fallback reason.
+3. Use the Semble MCP tool (`mcp__semble__search`) for semantic code search; if it is missing, `uvx --from "semble[mcp]" semble search "query" .`.
+4. Use the fff MCP tools (`mcp__fff__grep`, `mcp__fff__find_files`, `mcp__fff__multi_grep`) for exact text and file search. Never shell `fff`.
+5. Use the `codebase-memory` MCP graph tools for callers, callees, routes, and types before multi-file reads.
+6. Use the `LSP` tool (rust-analyzer) for Rust definitions, references, hover, diagnostics.
+7. Fall back to regular search/read tools if preferred tools are missing, fail, or lack needed capability. State fallback reason.
 
 Fallback rule: if preferred tool is missing, fails, or lacks needed capability, use regular tools and state reason in response or handoff.
 
-Subagents should try exposed `fff-mcp` tools before fallback. If unavailable, use `rg` or `find` and state reason.
+Subagents should try the fff MCP tools before fallback. If unavailable, use `rg` or `find` and state reason.
 
 Conductor prompts must repeat memory/search protocol and fallback behavior for subagents.
 
-This duplicates Claude's own global `~/.claude/CLAUDE.md` protocol on purpose: Copilot (VS Code and CLI) has no reliable user-global config inheritance, so this file is the only place Copilot will ever see it.
+This duplicates the protocol in the ai-setup plugin's `AGENTS.md` on purpose: Copilot (VS Code and CLI) has no reliable user-global config inheritance, so this file is the only place Copilot will ever see it.
 
 # Code Comment Rules (MANDATORY: WRITING, NOT REVIEW)
 
