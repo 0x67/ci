@@ -43,6 +43,9 @@ on:
       release-token:
         description: "PAT (contents: write + pull-requests: write). A PAT (not GITHUB_TOKEN) so the tag push retriggers downstream CI."
         required: true
+      private-dep-token:
+        description: "Read-only token (Contents: Read) for private git dependencies, used only while cargo resolves the lockfiles. No-op when absent."
+        required: false
 
 concurrency:
   group: release-please-${{ github.workflow }}-${{ github.ref }}
@@ -74,28 +77,58 @@ jobs:
 
       # A lockstep component bumps crate versions through extra-files, and no
       # updater can carry those into Cargo.lock: cargo rewrites that file and
-      # strips the annotations a generic updater needs. Refresh it on the PR
-      # branch instead, so a --locked build of the release commit still works.
+      # strips the annotations a generic updater needs. Refresh the lockfiles on
+      # the PR branch instead, so a --locked build of the release commit works.
+      # Detached fuzz workspaces keep their own Cargo.lock and go stale the same
+      # way, so every tracked fuzz lockfile is refreshed on each release PR.
       - uses: actions/checkout@v7
-        if: inputs.update-lock && steps.release.outputs.pr
+        if: steps.release.outputs.pr
         with:
           ref: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
           token: ${{ secrets.release-token }}
+          persist-credentials: false
 
-      - name: refresh Cargo.lock
-        if: inputs.update-lock && steps.release.outputs.pr
+      - name: refresh lockfiles
+        if: steps.release.outputs.pr
         env:
           BRANCH: ${{ fromJSON(steps.release.outputs.pr || '{}').headBranchName }}
+          UPDATE_LOCK: ${{ inputs.update-lock }}
+          DEP_TOKEN: ${{ secrets.private-dep-token }}
+          RELEASE_TOKEN: ${{ secrets.release-token }}
         run: |
           set -euo pipefail
-          # workspace members only: external pins stay exactly as resolved
-          cargo update --workspace
-          if git diff --quiet -- Cargo.lock; then
-            echo "Cargo.lock already matches the bumped versions"
+
+          # The checkout keeps no credentials, so the read-only token is the
+          # only one cargo can send. It is dropped before the push.
+          if [ -n "$DEP_TOKEN" ]; then
+            gitcfg="$RUNNER_TEMP/dep-gitconfig"
+            printf '[url "https://x-access-token:%s@github.com/"]\n\tinsteadOf = https://github.com/\n' "$DEP_TOKEN" > "$gitcfg"
+            export GIT_CONFIG_GLOBAL="$gitcfg" CARGO_NET_GIT_FETCH_WITH_CLI=true
+          fi
+
+          if [ "$UPDATE_LOCK" = "true" ]; then
+            # workspace members only: external pins stay exactly as resolved
+            cargo update --workspace
+          fi
+
+          # metadata without --locked rewrites only the entries that changed
+          while IFS= read -r -d '' lock; do
+            manifest="$(dirname "$lock")/Cargo.toml"
+            grep -q '^\[workspace\]' "$manifest" 2>/dev/null || continue
+            cargo metadata -q --format-version 1 --manifest-path "$manifest" > /dev/null
+          done < <(git ls-files -z ':(glob)**/fuzz/Cargo.lock')
+
+          unset GIT_CONFIG_GLOBAL CARGO_NET_GIT_FETCH_WITH_CLI
+
+          changed="$(git diff --name-only -- Cargo.lock ':(glob)**/fuzz/Cargo.lock')"
+          if [ -z "$changed" ]; then
+            echo "lockfiles already match the bumped versions"
             exit 0
           fi
+          echo "$changed"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Cargo.lock
-          git commit -m "chore(release): refresh Cargo.lock"
-          git push origin "HEAD:$BRANCH"
+          printf '%s\n' "$changed" | xargs git add --
+          git commit -m "chore(release): refresh lockfiles"
+          git push "https://x-access-token:${RELEASE_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:$BRANCH"

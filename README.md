@@ -146,6 +146,8 @@ Every module wires `release-please.yml`. Under the hood: `googleapis/release-ple
 
 Single source of truth: `.release-please-manifest.json` version + commit history. No manual `git tag`.
 
+On the release PR the workflow also refreshes lockfiles that release-please cannot carry: every tracked `fuzz/Cargo.lock` of a detached fuzz workspace (a `fuzz/Cargo.toml` with its own `[workspace]`), plus the root `Cargo.lock` when the caller sets `update-lock: true`. Fuzz lockfiles are refreshed with `cargo metadata` without `--locked`, which rewrites only changed entries, and the result is pushed to the release branch as one `chore(release): refresh lockfiles` commit. A repository without a fuzz lockfile is unaffected. Callers whose crates have private git dependencies pass the optional `private-dep-token` secret (read-only); it is used while cargo resolves and dropped before the push.
+
 Why not `release-plz`: it runs `cargo package` internally to compute the next version, and `cargo package` cannot resolve an unpublished cross-repo git dependency (`transport_core` is git-tag only, on no registry), so it fails. release-please only edits `Cargo.toml` + `CHANGELOG.md` as text, so unpublished git deps are a non-issue.
 
 ### Required secrets per consuming repo
