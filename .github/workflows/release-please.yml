@@ -55,9 +55,10 @@ jobs:
   release-please:
     name: release-please
     runs-on: ${{ startsWith(inputs.runner, '[') && fromJSON(inputs.runner) || inputs.runner }}
+    # Every write (release PR, tag, lockfile push) uses secrets.release-token.
+    # The GITHUB_TOKEN stays read-only so callers with a read default can start the job.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - name: verify release-token present
         env:
