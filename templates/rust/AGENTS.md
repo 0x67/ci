@@ -227,7 +227,8 @@ The `cfg_attr(not(test), ...)` form leaves unit-test code free to print. Restric
 5. `rg -n '—' -g '*.rs' -g '!**/target/**'`: must be empty
 6. Update spec progress in `specs/<task-slug>/tasks.md` if any task changed state
 7. Update `lat.md/` if any module/type/function was added, removed, or renamed
-
+{% if visibility == "PUBLIC" %}8. `rg -n 'proto[-_]idx|schemas/idx[/]' -g '*.rs' -g '*.toml' -g '*.md' -g '!specs/**' -g '!CHANGELOG.md' .`: must be empty. The pattern names the adapter crate and schema path of the one private venue repository, which no public file mentions. The `[/]` keeps the pattern from matching this line. Same check as the `private-adapter-gate` pre-commit command
+{% endif %}
 If any step fails: fix it. Do NOT skip. Do NOT report done until all pass.
 
 # Commit Message Convention

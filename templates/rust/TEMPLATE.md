@@ -60,7 +60,7 @@ Replace it with the module's real API.
 
 1. `cd <new-module>`.
 2. `git init && git add -A && git commit -m "chore: initial commit"`.
-3. Install local git hooks: `just hooks` (runs `lefthook install`). Requires `lefthook` + `convco` on PATH (`cargo install lefthook convco` or `brew install lefthook convco`).
+3. Install local git hooks: `just hooks` (runs `lefthook install`). Requires `lefthook` + `convco` on PATH (`cargo install lefthook convco` or `brew install lefthook convco`), and `rg` (ripgrep) for a PUBLIC repository.
 4. Set the required secret in the new repo: `RELEASE_PLZ_TOKEN` (PAT with `contents: write` + `pull-requests: write`). No `CARGO_REGISTRY_TOKEN`: crates set `publish = false` (git-tag distribution).
 5. Push. First push triggers CI matrix.
 
@@ -70,7 +70,7 @@ Replace it with the module's real API.
 
 | Stage        | Runs                                                                        |
 | ------------ | --------------------------------------------------------------------------- |
-| `pre-commit` | branch-name check, `cargo fmt --check`, `cargo clippy -D warnings`, `lat check` (parallel). |
+| `pre-commit` | branch-name check, `cargo fmt --check`, `cargo clippy -D warnings`, `lat check` (parallel). With `visibility = PUBLIC`, also `private-adapter-gate`: an `rg` check that no file names the private adapter crate. |
 | `commit-msg` | `convco check`: Conventional Commits gate.                                 |
 | `pre-push`   | block direct push to `main`/`master`, then `cargo nextest run --workspace`. |
 

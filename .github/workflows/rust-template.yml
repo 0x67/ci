@@ -98,6 +98,9 @@ jobs:
           if ! grep -q '^Visibility: PUBLIC\.' "$out/AGENTS.md"; then
             echo "::error::visibility line did not render"; fail=1
           fi
+          if ! grep -q '^    private-adapter-gate:$' "$out/lefthook.yml"; then
+            echo "::error::PUBLIC render lacks the private adapter gate"; fail=1
+          fi
           exit "$fail"
 
       - name: actionlint rendered workflows
